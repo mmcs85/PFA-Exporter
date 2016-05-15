@@ -1,6 +1,6 @@
 /**
 * @desc         Phaser Flash Asset Exporter
-* @version      1.0 - May 28th 2014
+* @version      0.2 - May 15th 2016
 * @author       Mário Silva <mmcs@outlook.pt>
 * @copyright    2016 mmcs85
 * @license      {@link https://github.com/mmcs85/PFA-Exporter/blob/master/LICENSE|MIT License}
