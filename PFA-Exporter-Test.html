@@ -1,0 +1,39 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+	<title>Phaser Flash Exporter Test</title>
+	<script type="text/javascript" src="phaser.min.js"></script>
+	<script type="text/javascript" src="PFA-Exporter.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+
+(function() {
+	var game = new Phaser.Game(lib.properties.width, lib.properties.height, Phaser.AUTO, '', {preload: preload, create: create, update: update });
+
+	function preload() {
+		game.load.atlas(lib.properties.atlas.name, lib.properties.atlas.image, lib.properties.atlas.metadata);
+	}
+
+	function create() {
+		game.add.existing(lib.LuckAward(game, 10, 10));
+		game.add.existing(lib.RabbitLegAward(game, 500, 10));
+		game.add.existing(lib.CrossAward(game, 10, 500));
+	}
+
+	function update() {
+	}
+})();
+
+</script>
+
+</body>
+</html>
