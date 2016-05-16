@@ -1,6 +1,6 @@
 /**
 * @desc         Phaser Flash Asset Exporter
-* @version      0.2 - May 15th 2016
+* @version      0.3 - May 15th 2016
 * @author       Mário Silva <mmcs@outlook.pt>
 * @copyright    2016 mmcs85
 * @license      {@link https://github.com/mmcs85/PFA-Exporter/blob/master/LICENSE|MIT License}
@@ -13,7 +13,36 @@ var exportedItems = [];
 
 /* Spritesheet Exporter Utils */
 
-var addSpriteSheetExportLibraryItem = function(item) {
+var scanElementForBitmaps = function(element) {
+	switch(element.elementType) {
+		case "shape":
+			if(element.isGroup) {
+				for(var m = 0; m < element.members.length; m++) {
+					var member = element.members[m];
+					scanElementForBitmaps(member);
+				}
+			}
+			break;
+		case "instance":
+			addSpriteSheetItem(element.libraryItem);
+	}
+}
+
+var scanSymbolForBitmaps = function(symbol) {
+	var timeline = symbol.timeline;
+	for(var l = 0; l < timeline.layers.length; l++) {
+		var layer = timeline.layers[l];
+		for(var f = 0; f < layer.frames.length; f++) {
+			var frame = layer.frames[f];
+			for(var e = 0; e < frame.elements.length; e++) {
+				var element = frame.elements[e];
+				scanElementForBitmaps(element);
+			}
+		}
+	}
+}
+
+var addSpriteSheetItem = function(item) {
 	if(exportedItems.indexOf(item.name) != -1)
 		return;
 	
@@ -23,81 +52,146 @@ var addSpriteSheetExportLibraryItem = function(item) {
 		    exportedItems.push(item.name);
 			break;
 		case "graphic":
-			sse.addSymbol(item);
-			exportedItems.push(item.name);			
-			break;
 		case "movie clip":
-			scanMovieClipForSpriteSheetItems(item);
+			scanSymbolForBitmaps(item);
 			exportedItems.push(item.name);
 			break;		
 	}
 }
 
-var scanMovieClipForSpriteSheetItems = function(mc) {
-	var timeline = mc.timeline;
-	for(var l = 0; l < timeline.layers.length; l++) {
-		var layer = timeline.layers[l];
-		for(var f = 0; f < layer.frames.length; f++) {
-			var frame = layer.frames[f];
-			for(var e = 0; e < frame.elements.length; e++) {
-				var element = frame.elements[e];
-				if(element.elementType == 'instance') {
-					addSpriteSheetExportLibraryItem(element.libraryItem);
-				}
-			}
-		}
-	}
-}
-
 /* Generator Utils */
 
-var generateLibraryItem = function(fileName, item) {
-	if(exportedItems.indexOf(item.name) != -1)
-		return "";
-
-	switch(item.itemType) {		
-		case "bitmap":
-		case "graphic":
-			exportedItems.push(item.name);
-			var symbolName = item.name.substr(item.name.lastIndexOf("/")+1, item.name.length);
-			var out = "lib." + symbolName.replace("\.", "") + " = function(game, x, y){\n";			
-			out = out.concat("    return game.make.sprite(x, y, '").concat(fileName).concat("', '").concat(symbolName).concat("');\n")
-				.concat("}\n\n");
-			sse.addBitmap(item);		    
-			return out;
-		case "movie clip":
-			exportedItems.push(item.name);
-			return generateMovieClip(fileName, item);	
-	}
-	
-	return "";
+var generateBitmapDefinition = function(fileName, item) {
+	var out = "";
+	var symbolName = item.name.substr(item.name.lastIndexOf("/")+1, item.name.length);		
+	out = out.concat("lib.").concat(symbolName.replace("\.", "")).concat(" = function(game, x, y){\n")
+		.concat("    return game.make.sprite(x, y, '").concat(fileName).concat("', '").concat(symbolName).concat("');\n")
+		.concat("}\n\n");
+	return out;
 }
 
-var generateMovieClip = function(fileName, mc) {	
-	var timeline = mc.timeline;
+var generateElementDefinition = function(fileName, element) {	
+	var out = "";
+	switch(element.elementType) {
+		case "shape":
+			if(element.isGroup) {
+				for(var m = 0; m < element.members.length; m++) {
+					var member = element.members[m];
+					out = out.concat(generateElementDefinition(fileName, member));
+				}
+			}
+			break;
+		case "instance":
+			out = out.concat(generateItem(fileName, element.libraryItem));
+			break;
+	}
+	return out;
+}
+
+var generateShape = function(shape, instanceName) {
+	var out = "";
 	
-	// generate movieclip instances first
+	out = out.concat("    var ")
+				.concat(instanceName)
+				.concat(" = game.make.graphics(").concat(shape.x).concat(",").concat(shape.y).concat(")\n");
+
+	for(var c = 0; c < shape.contours.length; c++) {
+		var contour = shape.contours[c];
+		
+		if(contour.interior) {
+			out = out.concat("        .beginFill('").concat(contour.fill.color).concat("')\n");
+		}
+		
+		var he = contour.getHalfEdge(); 
+ 
+		var iStart = he.id; 
+		var id = 0;
+		var points = [];
+		while (id != iStart) 
+		{ 
+			var vertice = he.getVertex();  
+			points.push(vertice.x);
+			points.push(vertice.y);
+			he = he.getNext(); 
+			id = he.id; 
+		}
+		
+		out = out.concat("        .drawPolygon([").concat(points.join()).concat("])");
+		
+		if(contour.interior) {
+			out = out.concat("\n        .endFill()");
+		}
+		
+		if(c == shape.contours.length-1) {
+			out = out.concat(";\n");
+		}
+		else {
+			out = out.concat("\n");
+		}
+	}
+	return out;
+}
+
+var generateInstance = function(instance, instanceName, symbolName) {
+	var out = "";
+	
+	out = out.concat("    var ")
+				.concat(instanceName)
+				.concat(" = lib.").concat(symbolName).concat("(game,").concat(instance.x).concat(",").concat(instance.y).concat(");\n");
+			
+	return out;
+}
+
+var generateElement = function(element, groupInstances) {
+	var out = "";
+
+	switch(element.elementType) {
+		case "shape":			
+			if(element.isGroup && element.members.length > 0) {
+				for(var m = 0; m < element.members.length; m++) {
+					var member = element.members[m];
+					out = out.concat(generateElement(member, groupInstances));
+				}
+			}
+			else {				
+				var instanceName = element.name || ("shape"+(groupInstances.length+1));
+				out = out.concat(generateShape(element, instanceName));
+				groupInstances.push(instanceName);
+			}
+			break;
+		case "instance":
+			var symbolName = element.libraryItem.name.substr(element.libraryItem.name.lastIndexOf("/")+1, element.libraryItem.name.length).replace("\.", "");
+			var instanceName = element.name || ("instance"+(groupInstances.length+1));
+			out = out.concat(generateInstance(element, instanceName, symbolName));
+			groupInstances.push(instanceName);
+			break;
+	}
+	
+	return out;
+}
+
+var generateSymbol = function(fileName, symbol) {	
+	var timeline = symbol.timeline;	
+	var out = "";	
+	
+	// generate referenced symbol definitions first
 	for(var l = 0; l < timeline.layers.length; l++) {
 		var layer = timeline.layers[l];
 		for(var f = 0; f < layer.frames.length; f++) {
 			var frame = layer.frames[f];
 			for(var e = 0; e < frame.elements.length; e++) {
 				var element = frame.elements[e];
-				if(element.elementType == 'instance') {
-					generateLibraryItem(fileName, element.libraryItem);
-				}
+				out = out.concat(generateElementDefinition(fileName, element));
 			}
 		}
 	}
 	
-	// generate movieclip
-	var instanceCount = 1;
-	var symbolName = mc.name.substr(mc.name.lastIndexOf("/")+1, mc.name.length);
-	var groupOut = "";
-	var first = true;
-	var out = "lib." + symbolName.replace("\.", "") + " = function(game, x, y){\n";
+	// generate symbol
+	var symbolName = symbol.name.substr(symbol.name.lastIndexOf("/")+1, symbol.name.length);
+	var groupInstances = [];
 
-	out = out.concat("    var group = game.make.group();\n")
+	out = out.concat("lib.").concat(symbolName.replace("\.", "")).concat(" = function(game, x, y){\n")
+		.concat("    var group = game.make.group();\n")
 		.concat("    group.x = x;\n")
 		.concat("    group.y = y;\n");
 	
@@ -106,32 +200,37 @@ var generateMovieClip = function(fileName, mc) {
 		for(var f = 0; f < layer.frames.length && f < 1; f++) {
 			var frame = layer.frames[f];
 			for(var e = 0; e < frame.elements.length; e++) {
-				var element = frame.elements[e];
-				if(element.elementType == 'instance') {
-					var symbolName = element.libraryItem.name.substr(element.libraryItem.name.lastIndexOf("/")+1, element.libraryItem.name.length).replace("\.", "");
-					var instanceName = element.name || ("instance"+instanceCount++);
-					
-					if(first) {
-						groupOut = groupOut.concat(instanceName);
-						first = false;
-					}
-					else {
-						groupOut = groupOut.concat(",").concat(instanceName);
-					}
-
-					out = out.concat("    var ")
-						.concat(instanceName)
-						.concat(" = lib.").concat(symbolName).concat("(game,").concat(element.x).concat(",").concat(element.y).concat(");\n")
-				}
+				var element = frame.elements[e];								
+				out = out.concat(generateElement(element, groupInstances));
 			}
 		}
 	}
+
+	if(groupInstances.length > 0) {
+		out = out.concat("    group.addMutiple([").concat(groupInstances.join()).concat("]);\n");
+	}
 	
-	
-	out = out.concat("    group.addMutiple([").concat(groupOut).concat("]);\n")
-		.concat("    return group;\n")
+	out = out.concat("    return group;\n")
 	.concat("}\n\n");
+	
 	return out;
+}
+
+var generateItem = function(fileName, item) {
+	if(exportedItems.indexOf(item.name) != -1)
+		return "";
+
+	switch(item.itemType) {		
+		case "bitmap":
+			exportedItems.push(item.name);
+			return generateBitmapDefinition(fileName, item);
+		case "graphic":
+		case "movie clip":
+			exportedItems.push(item.name);
+			return generateSymbol(fileName, item);	
+	}
+	
+	return "";
 }
 
 var generateSymbols = function(fileName) {
@@ -145,13 +244,13 @@ var generateSymbols = function(fileName) {
 		if(!item.linkageClassName)
 			continue;
 		
-		out = out.concat(generateLibraryItem(fileName, item));		
+		out = out.concat(generateItem(fileName, item));		
 	}
 	return out;
 };
 
-var generateAssetsFile = function(fileName) {
-	var out = "// Generated by PFA-Exporter v0.2 at " + new Date().toUTCString() + "\n\n";
+var generateAssetFile = function(fileName) {
+	var out = "// Generated by PFA-Exporter v0.3 at " + new Date().toUTCString() + "\n\n";
 	
 	out = out.concat("(function (lib) {	\n\n")
 		.concat("// library properties:\n")
@@ -181,25 +280,26 @@ var main = function() {
 
 	if(!fileURL)
 		return;
-	
+
 	for (var i = 0; i < libItems.length; i++)
 	{
 		var item = libItems[i];
-		
 		// ignore items without linkage unless is referenced as instance in other item
 		if(!item.linkageClassName)
 			continue;
 		
-		addSpriteSheetExportLibraryItem(item);	
+		addSpriteSheetItem(item);	
 	}
 
 	var fileNoExtURL = fileURL.substr(0, fileURL.length - 3);
 	var fileName = fileNoExtURL.substr(fileNoExtURL.lastIndexOf("/")+1, fileNoExtURL.length);
 	
+	// save phaser flash asset file
 	fl.outputPanel.clear();
-	fl.trace(generateAssetsFile(fileName));
+	fl.trace(generateAssetFile(fileName));
 	fl.outputPanel.save(fileURL);
 
+	// save atlas and metadata
 	sse.autoSize = true;
 	sse.allowRotate = true;
 	sse.layoutFormat = "JSON";
@@ -207,4 +307,5 @@ var main = function() {
 
 	fl.trace("exported assets successfully.");
 }
+
 main();
