@@ -61,7 +61,7 @@ var addSpriteSheetItem = function(item) {
 
 /* Generator Utils */
 
-var generateBitmapDefinition = function(fileName, item) {
+var generateBitmapConstructor = function(fileName, item) {
 	var out = "";
 	var symbolName = item.name.substr(item.name.lastIndexOf("/")+1, item.name.length);		
 	out = out.concat("lib.").concat(symbolName.replace("\.", "")).concat(" = function(game, x, y){\n")
@@ -70,14 +70,14 @@ var generateBitmapDefinition = function(fileName, item) {
 	return out;
 }
 
-var generateElementDefinition = function(fileName, element) {	
+var generateElementConstructor = function(fileName, element) {	
 	var out = "";
 	switch(element.elementType) {
 		case "shape":
 			if(element.isGroup) {
 				for(var m = 0; m < element.members.length; m++) {
 					var member = element.members[m];
-					out = out.concat(generateElementDefinition(fileName, member));
+					out = out.concat(generateElementConstructor(fileName, member));
 				}
 			}
 			break;
@@ -98,8 +98,20 @@ var generateShape = function(shape, instanceName) {
 	for(var c = 0; c < shape.contours.length; c++) {
 		var contour = shape.contours[c];
 		
+		var fillColor = "000000";
+		var fillAlpha = "01";
+		
+		if(contour.fill.color) {
+			fillColor = contour.fill.color.substr(1, 6);
+			fillAlpha = contour.fill.color.length == 9 ? contour.fill.color.substr(6, 2) : 1;
+		}
+		
+		//TODO support linear gradients
+		//if(fillAlpha == "00")
+		//	continue;
+		
 		if(contour.interior) {
-			out = out.concat("        .beginFill('").concat(contour.fill.color).concat("')\n");
+			out = out.concat("        .beginFill(0x").concat(fillColor).concat(",0x").concat(fillAlpha).concat(")\n");
 		}
 		
 		var he = contour.getHalfEdge(); 
@@ -181,7 +193,7 @@ var generateSymbol = function(fileName, symbol) {
 			var frame = layer.frames[f];
 			for(var e = 0; e < frame.elements.length; e++) {
 				var element = frame.elements[e];
-				out = out.concat(generateElementDefinition(fileName, element));
+				out = out.concat(generateElementConstructor(fileName, element));
 			}
 		}
 	}
@@ -207,7 +219,7 @@ var generateSymbol = function(fileName, symbol) {
 	}
 
 	if(groupInstances.length > 0) {
-		out = out.concat("    group.addMutiple([").concat(groupInstances.join()).concat("]);\n");
+		out = out.concat("    group.addMultiple([").concat(groupInstances.join()).concat("]);\n");
 	}
 	
 	out = out.concat("    return group;\n")
@@ -223,7 +235,7 @@ var generateItem = function(fileName, item) {
 	switch(item.itemType) {		
 		case "bitmap":
 			exportedItems.push(item.name);
-			return generateBitmapDefinition(fileName, item);
+			return generateBitmapConstructor(fileName, item);
 		case "graphic":
 		case "movie clip":
 			exportedItems.push(item.name);
