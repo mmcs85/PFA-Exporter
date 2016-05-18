@@ -51,7 +51,7 @@ lib.S1RC = function(game, x, y){
     group.y = y;
     var instance1 = lib.RabbitLegBitmap(game,13.05,0);
     instance1.scale.set(0.2903594970703125,0.3137664794921875);
-    var text2 = game.make.text(0,35.85,'Rabbit Leg',{font: " 12pt 'Times New Roman'",fill: '#000000'});
+    var text2 = game.make.text(0,35.85,'Rabbit Leg',{font:" 12pt 'Times New Roman'",fill:'#000000',strokeThickness:2});
     group.addMultiple([instance1,text2]);
     return group;
 }
@@ -71,7 +71,7 @@ lib.RabbitLegAward = function(game, x, y){
     group.x = x;
     group.y = y;
     var instance1 = lib.Symbol1RC(game,0,0);
-    var text2 = game.make.text(24,65.85,'2,00 €',{font: "bold 10pt 'Times New Roman'",fill: '#FFFFFF'});
+    var text2 = game.make.text(24,65.85,'2,00 €',{font:"bold 10pt 'Times New Roman'",fill:'#FFFFFF',strokeThickness:2});
     text2.scale.set(1,0.6963958740234375);
     group.addMultiple([instance1,text2]);
     return group;
