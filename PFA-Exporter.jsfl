@@ -64,7 +64,7 @@ var addSpriteSheetItem = function(item) {
 var generateBitmapConstructor = function(fileName, item) {
 	var out = "";
 	var symbolName = item.name.substr(item.name.lastIndexOf("/")+1, item.name.length);		
-	out = out.concat("lib.").concat(symbolName.replace("\.", "")).concat(" = function(game, x, y){\n")
+	out = out.concat("lib.").concat(symbolName.replace(/\.|\-/g, "")).concat(" = function(game, x, y){\n")
 		.concat("    return game.make.sprite(x, y, '").concat(fileName).concat("', '").concat(symbolName).concat("');\n")
 		.concat("}\n\n");
 	return out;
@@ -202,7 +202,7 @@ var generateElement = function(element, groupInstances) {
 						.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
 				}
 				
-				if(element.rotation != 0) {
+				if(element.rotation) {
 					out = out.concat("    ").concat(instanceName)
 						.concat(".angle = ").concat(element.rotation).concat(";\n");
 				}
@@ -218,14 +218,14 @@ var generateElement = function(element, groupInstances) {
 					.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
 			}
 			
-			if(element.rotation != 0) {
+			if(element.rotation) {
 				out = out.concat("    ").concat(instanceName)
 					.concat(".angle = ").concat(element.rotation).concat(";\n");
 			}
 			groupInstances.push(instanceName);
 			break;
 		case "instance":
-			var symbolName = element.libraryItem.name.substr(element.libraryItem.name.lastIndexOf("/")+1, element.libraryItem.name.length).replace("\.", "");
+			var symbolName = element.libraryItem.name.substr(element.libraryItem.name.lastIndexOf("/")+1, element.libraryItem.name.length).replace(/\.|\-/g, "");
 			var instanceName = element.name || ("instance"+(groupInstances.length+1));
 			out = out.concat(generateInstance(element, instanceName, symbolName));
 		
@@ -234,7 +234,7 @@ var generateElement = function(element, groupInstances) {
 					.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
 			}
 			
-			if(element.rotation != 0) {
+			if(element.rotation) {
 				out = out.concat("    ").concat(instanceName)
 					.concat(".angle = ").concat(element.rotation).concat(";\n");
 			}
@@ -266,7 +266,7 @@ var generateSymbol = function(fileName, symbol) {
 	var symbolName = symbol.name.substr(symbol.name.lastIndexOf("/")+1, symbol.name.length);
 	var groupInstances = [];
 
-	out = out.concat("lib.").concat(symbolName.replace("\.", "")).concat(" = function(game, x, y){\n")
+	out = out.concat("lib.").concat(symbolName.replace(/\.|\-/g, "")).concat(" = function(game, x, y){\n")
 		.concat("    var group = game.make.group();\n")
 		.concat("    group.x = x;\n")
 		.concat("    group.y = y;\n");
@@ -378,7 +378,7 @@ var main = function() {
 	// save atlas and metadata
 	sse.autoSize = true;
 	sse.allowRotate = true;
-	sse.layoutFormat = "JSON";
+	sse.layoutFormat = "JSON-Array";
 	sse.exportSpriteSheet(fileNoExtURL, {format:"png", bitDepth:32, backgroundColor:"#00000000"});
 
 	fl.trace("exported assets successfully.");
