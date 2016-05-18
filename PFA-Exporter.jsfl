@@ -113,6 +113,9 @@ var generateShape = function(shape, instanceName) {
 		if(contour.interior) {
 			out = out.concat("        .beginFill(0x").concat(fillColor).concat(",0x").concat(fillAlpha).concat(")\n");
 		}
+		else {
+			out = out.concat("        .lineStyle(1,0x").concat(fillColor).concat(",0x").concat(fillAlpha).concat(")\n");
+		}
 		
 		var he = contour.getHalfEdge(); 
  
@@ -164,10 +167,12 @@ var generateText = function(text, instanceName) {
 		.concat(text.getTextString())
 		.concat("',")
 		.concat("{")
-		.concat("font: \"").concat(fontWeight + " " + text.getTextAttr("size") + "pt '" + text.getTextAttr("face"))
+		.concat("font:\"").concat(fontWeight + " " + text.getTextAttr("size") + "pt '" + text.getTextAttr("face"))
 		.concat("'\",")
-		.concat("fill: '").concat(text.getTextAttr("fillColor"))
-	.concat("'});\n");
+		.concat("fill:'").concat(text.getTextAttr("fillColor"))
+		.concat("'\,")
+		.concat("strokeThickness:2")
+	.concat("});\n");
 	
 	return out;
 }
@@ -182,63 +187,52 @@ var generateInstance = function(instance, instanceName, symbolName) {
 	return out;
 }
 
+var generateTransformations = function(element, instanceName) {
+	var out = "";
+	if(element.scaleX != 1 || element.scaleY != 1) {
+		out = out.concat("    ").concat(instanceName)
+			.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
+	}
+	
+	if(element.rotation) {
+		out = out.concat("    ").concat(instanceName)
+			.concat(".angle = ").concat(element.rotation).concat(";\n");
+	}
+	return out;
+}
+
 var generateElement = function(element, groupInstances) {
 	var out = "";
-
 	switch(element.elementType) {
-		case "shape":			
+		case "shape":
+			if(element.contours.length > 0) {
+				var instanceName = element.name || ("shape"+(groupInstances.length+1));
+				out = out.concat(generateShape(element, instanceName))
+					.concat(generateTransformations(element, instanceName));
+				
+				groupInstances.push(instanceName);
+			}
+
 			if(element.isGroup && element.members.length > 0) {
 				for(var m = 0; m < element.members.length; m++) {
 					var member = element.members[m];
 					out = out.concat(generateElement(member, groupInstances));
 				}
 			}
-			else {				
-				var instanceName = element.name || ("shape"+(groupInstances.length+1));
-				out = out.concat(generateShape(element, instanceName));
-				
-				if(element.scaleX != 1 || element.scaleY != 1) {
-					out = out.concat("    ").concat(instanceName)
-						.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
-				}
-				
-				if(element.rotation) {
-					out = out.concat("    ").concat(instanceName)
-						.concat(".angle = ").concat(element.rotation).concat(";\n");
-				}
-				groupInstances.push(instanceName);
-			}
 			break;
 		case "text":
 			var instanceName = element.name || ("text"+(groupInstances.length+1));
-			out = out.concat(generateText(element, instanceName));
-		
-			if(element.scaleX != 1 || element.scaleY != 1) {
-				out = out.concat("    ").concat(instanceName)
-					.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
-			}
-			
-			if(element.rotation) {
-				out = out.concat("    ").concat(instanceName)
-					.concat(".angle = ").concat(element.rotation).concat(";\n");
-			}
+			out = out.concat(generateText(element, instanceName))
+				.concat(generateTransformations(element, instanceName));
+
 			groupInstances.push(instanceName);
 			break;
 		case "instance":
 			var symbolName = element.libraryItem.name.substr(element.libraryItem.name.lastIndexOf("/")+1, element.libraryItem.name.length).replace(/\.|\-/g, "");
 			var instanceName = element.name || ("instance"+(groupInstances.length+1));
-			out = out.concat(generateInstance(element, instanceName, symbolName));
-		
-			if(element.scaleX != 1 || element.scaleY != 1) {
-				out = out.concat("    ").concat(instanceName)
-					.concat(".scale.set(").concat(element.scaleX).concat(",").concat(element.scaleY).concat(");\n");
-			}
-			
-			if(element.rotation) {
-				out = out.concat("    ").concat(instanceName)
-					.concat(".angle = ").concat(element.rotation).concat(";\n");
-			}
-		
+			out = out.concat(generateInstance(element, instanceName, symbolName))
+				.concat(generateTransformations(element, instanceName));
+
 			groupInstances.push(instanceName);
 			break;
 	}
@@ -276,7 +270,7 @@ var generateSymbol = function(fileName, symbol) {
 		for(var f = 0; f < layer.frames.length && f < 1; f++) {
 			var frame = layer.frames[f];
 			for(var e = 0; e < frame.elements.length; e++) {
-				var element = frame.elements[e];								
+				var element = frame.elements[e];
 				out = out.concat(generateElement(element, groupInstances));
 			}
 		}
