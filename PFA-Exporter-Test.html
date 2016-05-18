@@ -7,7 +7,8 @@
 	<script type="text/javascript" src="PFA-Exporter.js"></script>
     <style type="text/css">
         body {
-            margin: 0;
+    		margin: 0;
+		background-color: #ccc;
         }
     </style>
 </head>
@@ -24,9 +25,11 @@
 	}
 
 	function create() {
-		game.add.existing(lib.LuckAward(game, 10, 10));
-		game.add.existing(lib.RabbitLegAward(game, 500, 10));
-		game.add.existing(lib.CrossAward(game, 10, 500));
+		game.stage.backgroundColor = lib.properties.color;
+		game.add.existing(lib.LuckAward(game, 500, 10));
+		game.add.existing(lib.RabbitLegAward(game, 10, 10));
+		game.add.existing(lib.RabbitLegAward(game, 250, 250));
+		game.add.existing(lib.CrossAward(game, 10, 600));
 	}
 
 	function update() {
