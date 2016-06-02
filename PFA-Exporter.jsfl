@@ -90,31 +90,53 @@ var generateElementConstructor = function(fileName, element) {
 
 var generateShape = function(shape, instanceName) {
 	var out = "";
+	var instanceShapeBd = instanceName+"BD";
 	
-	out = out.concat("    var ")
-				.concat(instanceName)
-				.concat(" = game.make.graphics()\n");
-	
+	out = out.concat("    if(!game.cache.getBitmapData('").concat(instanceShapeBd).concat("')) {\n")
+		.concat("        var ").concat(instanceShapeBd).concat(" = game.make.bitmapData(256, 256, '").concat(instanceShapeBd).concat("', true);\n")
+		.concat("        var ctx = ").concat(instanceShapeBd).concat(".ctx;\n");
+
 	for(var c = 0; c < shape.contours.length; c++) {
 		var contour = shape.contours[c];
-		
-		var fillColor = "000000";
-		var fillAlpha = "01";
-		
-		if(contour.fill.color) {
-			fillColor = contour.fill.color.substr(1, 6);
-			fillAlpha = contour.fill.color.length == 9 ? contour.fill.color.substr(6, 2) : 1;
-		}
-		
-		//TODO support linear gradients
-		//if(fillAlpha == "00")
-		//	continue;
-		
-		if(contour.interior) {
-			out = out.concat("        .beginFill(0x").concat(fillColor).concat(",0x").concat(fillAlpha).concat(")\n");
-		}
-		else {
-			out = out.concat("        .lineStyle(1,0x").concat(fillColor).concat(",0x").concat(fillAlpha).concat(")\n");
+		var color = contour.fill.color || "#000";
+
+		//Property; a string that specifies the fill style. Acceptable values are "bitmap", "solid", "linearGradient", "radialGradient", and "noFill".
+        //If this value is "linearGradient" or "radialGradient", the fill.colorArray and fill.posArray properties are also available. 
+		//If this value is "bitmap", the fill.bitmapIsClipped and fill.bitmapPath properties are also available.		
+		switch(contour.fill.style) {
+			case "bitmap":
+				break;
+			case "noFill":
+				out = out.concat("        ctx.strokeStyle = '").concat(color).concat("';\n");
+				break;
+			case "solid":
+				out = out.concat("        ctx.fillStyle = '").concat(color).concat("';\n");
+				break;
+			case "linearGradient":
+				var matrix = contour.fill.matrix;
+				var gradientInstance = "gradient" + (c+1);
+				var gradPoints = [
+					matrix.b*819.2, //x0
+					matrix.d*819.2,  //y0
+					matrix.a*1638.4+matrix.b*819.2, //x1
+					matrix.c*1638.4+matrix.d*819.2 //y1
+				];
+				out = out.concat("        var ").concat(gradientInstance).concat(" = ctx.createLinearGradient(").concat(gradPoints.join()).concat(");\n");
+				
+				for(var g = 0; g < contour.fill.colorArray.length; g++) {
+					out = out.concat("        ").concat(gradientInstance).concat(".addColorStop(").concat(contour.fill.posArray[g]/255).concat(", '").concat(contour.fill.colorArray[g]).concat("');\n");
+				}
+				break;
+			case "radialGradient":
+				//check http://rectangleworld.com/blog/archives/169
+				/*var matrix = contour.fill.matrix;
+				out = out.concat(matrix.a).concat(",")
+						 .concat(matrix.b).concat(",")
+						 .concat(matrix.c).concat(",")
+						 .concat(matrix.d).concat(",")
+						 .concat(matrix.tx).concat(",")
+						 .concat(matrix.ty).concat("\n");*/
+				break;
 		}
 		
 		var he = contour.getHalfEdge(); 
@@ -131,19 +153,17 @@ var generateShape = function(shape, instanceName) {
 			id = he.id; 
 		}
 		
-		out = out.concat("        .drawPolygon([").concat(points.join()).concat("])");
+		out = out.concat("        drawPolygon(ctx, [").concat(points.join()).concat("]);\n");
 		
 		if(contour.interior) {
-			out = out.concat("\n        .endFill()");
-		}
-		
-		if(c == shape.contours.length-1) {
-			out = out.concat(";\n");
+			out = out.concat("        ctx.fill();\n");
 		}
 		else {
-			out = out.concat("\n");
+			out = out.concat("        ctx.stroke();\n");
 		}
 	}
+	out = out.concat("    }\n")
+		.concat("    var ").concat(instanceName).concat(" = game.make.sprite(0, 0, '").concat(instanceShapeBd).concat("');\n");
 
 	return out;
 }
@@ -201,12 +221,12 @@ var generateTransformations = function(element, instanceName) {
 	return out;
 }
 
-var generateElement = function(element, groupInstances) {
+var generateElement = function(element, groupInstances, symbolName) {
 	var out = "";
 	switch(element.elementType) {
 		case "shape":
 			if(element.contours.length > 0) {
-				var instanceName = element.name || ("shape"+(groupInstances.length+1));
+				var instanceName = element.name || (symbolName+"_shape"+(groupInstances.length+1));
 				out = out.concat(generateShape(element, instanceName))
 					.concat(generateTransformations(element, instanceName));
 				
@@ -216,12 +236,12 @@ var generateElement = function(element, groupInstances) {
 			if(element.isGroup && element.members.length > 0) {
 				for(var m = 0; m < element.members.length; m++) {
 					var member = element.members[m];
-					out = out.concat(generateElement(member, groupInstances));
+					out = out.concat(generateElement(member, groupInstances, symbolName));
 				}
 			}
 			break;
 		case "text":
-			var instanceName = element.name || ("text"+(groupInstances.length+1));
+			var instanceName = element.name || (symbolName+"text"+(groupInstances.length+1));
 			out = out.concat(generateText(element, instanceName))
 				.concat(generateTransformations(element, instanceName));
 
@@ -267,11 +287,14 @@ var generateSymbol = function(fileName, symbol) {
 	
 	for(var l = 0; l < timeline.layers.length; l++) {
 		var layer = timeline.layers[l];
-		for(var f = 0; f < layer.frames.length && f < 1; f++) {
+		for(var f = 0; f < layer.frames.length; f++) {
 			var frame = layer.frames[f];
+			//out = out.concat("//layer.animationtype: ").concat(layer.animationType).concat("\n");
 			for(var e = 0; e < frame.elements.length; e++) {
 				var element = frame.elements[e];
-				out = out.concat(generateElement(element, groupInstances));
+				//out = out.concat("//element.name: ").concat(element.name).concat("\n");
+				out = out.concat(generateElement(element, groupInstances, symbolName));
+				previousElement = element;
 			}
 		}
 	}
@@ -323,6 +346,14 @@ var generateAssetFile = function(fileName) {
 	var out = "// Generated by PFA-Exporter v0.3.5 at " + new Date().toUTCString() + "\n\n";
 	
 	out = out.concat("(function (lib) {	\n\n")
+		.concat("var drawPolygon = function(ctx, poly) {\n")
+		.concat("   if(poly.length < 4) return;\n")
+		.concat("   ctx.beginPath();\n")
+		.concat("   ctx.moveTo(poly[0], poly[1]);\n")
+		.concat("   for( var i=2 ; i < poly.length-1 ; i+=2 )\n")
+		.concat("      ctx.lineTo(poly[i] , poly[i+1]);\n")
+		.concat("   ctx.closePath();\n")
+		.concat("}\n")
 		.concat("// library properties:\n")
 		.concat("lib.properties = {\n")
 		.concat("	width:").concat(document.width).concat(",\n")
