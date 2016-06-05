@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="300" height="300" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+<script>
+var drawPolygon = function(ctx, poly) {
+   if(poly.length < 4) return;
+   ctx.beginPath();
+   ctx.moveTo(poly[0], poly[1]);
+   for( var i=2 ; i < poly.length-1 ; i+=2 )
+      ctx.lineTo(poly[i] , poly[i+1]);
+   ctx.closePath();
+}
+
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+
+        ctx.strokeStyle = '#000';
+        drawPolygon(ctx, [85.35,85.35,50,100,14.65,85.35,0,50,14.65,14.65,50,0,85.35,14.65,100,50]);
+        ctx.stroke();
+        var gradient2 = ctx.createLinearGradient(-49.987500000000004,99.97500000000001,-49.987500000000004,0);
+        gradient2.addColorStop(0, '#004602');
+        gradient2.addColorStop(1, '#FFFFFF');
+        ctx.fillStyle = gradient2;
+        drawPolygon(ctx, [100,50,85.35,14.65,50,0,14.65,14.65,0,50,14.65,85.35,50,100,85.35,85.35]);
+        ctx.fill();
+
+</script>
+
+<p><strong>Note:</strong> The canvas tag is not supported in Internet 
+Explorer 8 and earlier versions.</p>
+
+</body>
+</html>
