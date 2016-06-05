@@ -115,17 +115,31 @@ var generateShape = function(shape, instanceName) {
 			case "linearGradient":
 				var matrix = contour.fill.matrix;
 				var gradientInstance = "gradient" + (c+1);
-				var gradPoints = [
-					matrix.b*819.2, //x0
-					matrix.d*819.2,  //y0
-					matrix.a*1638.4+matrix.b*819.2, //x1
-					matrix.c*1638.4+matrix.d*819.2 //y1
-				];
+				var gradPoints = null;
+			
+				if(contour.orientation == -1) {
+					gradPoints = [
+						matrix.a*1638.4+matrix.b*819.2, //x0
+						matrix.c*1638.4+matrix.d*819.2, //y0
+						matrix.b*819.2, //x1
+						matrix.d*819.2  //y1
+					];
+				}
+				else {
+					gradPoints = [
+						matrix.b*819.2, //x0
+						matrix.d*819.2,  //y0
+						matrix.a*1638.4+matrix.b*819.2, //x1
+						matrix.c*1638.4+matrix.d*819.2 //y1
+					];
+				}
+
 				out = out.concat("        var ").concat(gradientInstance).concat(" = ctx.createLinearGradient(").concat(gradPoints.join()).concat(");\n");
 				
 				for(var g = 0; g < contour.fill.colorArray.length; g++) {
 					out = out.concat("        ").concat(gradientInstance).concat(".addColorStop(").concat(contour.fill.posArray[g]/255).concat(", '").concat(contour.fill.colorArray[g]).concat("');\n");
 				}
+				out = out.concat("        ctx.fillStyle = ").concat(gradientInstance).concat(";\n");
 				break;
 			case "radialGradient":
 				//check http://rectangleworld.com/blog/archives/169
