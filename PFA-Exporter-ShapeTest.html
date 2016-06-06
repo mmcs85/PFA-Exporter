@@ -7,25 +7,30 @@ Your browser does not support the HTML5 canvas tag.</canvas>
 
 <script>
 var drawPolygon = function(ctx, poly) {
-   if(poly.length < 4) return;
+   if(poly.length < 1) return;
    ctx.beginPath();
-   ctx.moveTo(poly[0], poly[1]);
-   for( var i=2 ; i < poly.length-1 ; i+=2 )
-      ctx.lineTo(poly[i] , poly[i+1]);
+   ctx.moveTo(poly[0].x, poly[0].y);
+   for( var i=1 ; i < poly.length ; i++ ) {
+      var elem = poly[i];
+      if(!elem.bc)
+          ctx.lineTo(elem.x , elem.y);
+      else
+          ctx.quadraticCurveTo(elem.bc[2],elem.bc[3], elem.x, elem.y);
+   }
    ctx.closePath();
 }
 
 var c = document.getElementById("myCanvas");
 var ctx = c.getContext("2d");
 
-        ctx.strokeStyle = '#000';
-        drawPolygon(ctx, [85.35,85.35,50,100,14.65,85.35,0,50,14.65,14.65,50,0,85.35,14.65,100,50]);
+        ctx.strokeStyle = '#000000';
+        drawPolygon(ctx, [{x:85.35, y:85.35},{x:50, y:100,bc: [85.35,85.35,70.7,100]},{x:14.65, y:85.35,bc: [50,100,29.3,100]},{x:0, y:50,bc: [14.65,85.35,0,70.7]},{x:14.65, y:14.65,bc: [0,50,0,29.3]},{x:50, y:0,bc: [14.65,14.65,29.3,0]},{x:85.35, y:14.65,bc: [50,0,70.7,0]},{x:100, y:50,bc: [85.35,14.65,100,29.3]},{x:100, y:50,bc: [100,50,100,70.7]}]);
         ctx.stroke();
         var gradient2 = ctx.createLinearGradient(-49.987500000000004,99.97500000000001,-49.987500000000004,0);
         gradient2.addColorStop(0, '#004602');
         gradient2.addColorStop(1, '#FFFFFF');
         ctx.fillStyle = gradient2;
-        drawPolygon(ctx, [100,50,85.35,14.65,50,0,14.65,14.65,0,50,14.65,85.35,50,100,85.35,85.35]);
+        drawPolygon(ctx, [{x:100, y:50},{x:85.35, y:85.35,bc: [85.35,85.35,70.7,100]},{x:50, y:100,bc: [50,100,29.3,100]},{x:14.65, y:85.35,bc: [14.65,85.35,0,70.7]},{x:0, y:50,bc: [0,50,0,29.3]},{x:14.65, y:14.65,bc: [14.65,14.65,29.3,0]},{x:50, y:0,bc: [50,0,70.7,0]},{x:85.35, y:14.65,bc: [85.35,14.65,100,29.3]},{x:85.35, y:14.65,bc: [100,50,100,70.7]}]);
         ctx.fill();
 
 </script>
