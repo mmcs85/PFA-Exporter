@@ -88,6 +88,26 @@ var generateElementConstructor = function(fileName, element) {
 	return out;
 }
 
+var generatePolyPoint = function(shape, he, first) {
+	var out = "",
+		e = he.getEdge(),
+		vertice = he.getVertex();
+	
+	out = first ? out.concat("{") : out.concat(",{");
+	out = out.concat("x:").concat(vertice.x).concat(", y:").concat(vertice.y);
+	if(!first && !e.isLine) {
+		var cubicPoints = shape.getCubicSegmentPoints(e.cubicSegmentIndex);
+		out = out.concat(",bc: [")
+			.concat(cubicPoints[1].x).concat(",")
+			.concat(cubicPoints[1].y).concat(",")
+			.concat(cubicPoints[2].x).concat(",")
+			.concat(cubicPoints[2].y)
+			.concat("]");
+	}
+	out = out.concat("}");
+	return out;
+}
+
 var generateShape = function(shape, instanceName) {
 	var out = "";
 	var instanceShapeBd = instanceName+"BD";
@@ -95,33 +115,11 @@ var generateShape = function(shape, instanceName) {
 	out = out.concat("    if(!game.cache.getBitmapData('").concat(instanceShapeBd).concat("')) {\n")
 		.concat("        var ").concat(instanceShapeBd).concat(" = game.make.bitmapData(256, 256, '").concat(instanceShapeBd).concat("', true);\n")
 		.concat("        var ctx = ").concat(instanceShapeBd).concat(".ctx;\n");
-	
-	/*
-	for(var e = 0; e < shape.edges.length; e++) {
-		var edge = shape.edges[e];
-		var index = edge.cubicSegmentIndex;
-		out = out.concat("edge index:" + e +"\n");
-		out = out.concat("edge.control 1 x:" + edge.getControl(0).x + ", y:"+edge.getControl(0).y+"\n");
-		out = out.concat("edge.control 2 x:" + edge.getControl(1).x + ", y:"+edge.getControl(1).y+"\n");
-		out = out.concat("edge.control 3 x:" + edge.getControl(2).x + ", y:"+edge.getControl(2).y+"\n");
-		out = out.concat("edge.isLine:" + edge.isLine + "\n");
-		out = out.concat("edge.stroke.color:" + edge.stroke.color + "\n");
-		out = out.concat("edge.stroke.style:" + edge.stroke.style + "\n");
-		
-		var cubicPoints = shape.getCubicSegmentPoints(index); 
-		for (i=0; i<cubicPoints.length; i++) {
-			out = out.concat("cubicPoint: " + i +" x: " + cubicPoints[i].x  + " y: " + cubicPoints[i].y + "\n"); 
-		}
-		out = out.concat("\n");
-	}*/
 
 	for(var c = 0; c < shape.contours.length; c++) {
-		var contour = shape.contours[c];		
+		var contour = shape.contours[c];
 		var he = contour.getHalfEdge();
-		var e = he.getEdge();
-		var iStart = he.id; 
-		var id = 0;
-		var color = contour.fill.color || e.stroke.color || "#000";
+		var color = contour.fill.color || he.getEdge().stroke.color || "#000";
 
 		//Property; a string that specifies the fill style. Acceptable values are "bitmap", "solid", "linearGradient", "radialGradient", and "noFill".
         //If this value is "linearGradient" or "radialGradient", the fill.colorArray and fill.posArray properties are also available. 
@@ -178,43 +176,15 @@ var generateShape = function(shape, instanceName) {
 		
 		out = out.concat("        drawPolygon(ctx, [");
 		
+		var iStart = he.id; 
+		var id = 0;
 		while (id != iStart) 
 		{ 
-			var vertice = he.getVertex();
-			var elem = {
-				x: vertice.x,
-				y: vertice.y,
-				isLine: e.isLine
-			};
-			
-			if(id)
-				out = out.concat(",{");
-			else
-				out = out.concat("{");
-
-			out = out.concat("x:").concat(vertice.x).concat(", y:").concat(vertice.y);
-			if(id && !e.isLine) {
-				var ctr1 = e.getControl(0);
-				var ctr2 = e.getControl(1);
-				out = out.concat(",bc: [")
-					.concat(ctr1.x).concat(",")
-					.concat(ctr1.y).concat(",")
-					.concat(ctr2.x).concat(",")
-					.concat(ctr2.y)
-					.concat("]");
-			}
-			out = out.concat("}");
-			
-			if(contour.orientation == -1)
-				he = he.getPrev();
-			else
-				he = he.getNext();
-			
-			
-			e = he.getEdge();
-			id = he.id; 
+			out = out.concat(generatePolyPoint(shape, he, id == 0));
+			he = he.getNext();
+			id = he.id;
 		}
-
+		out = out.concat(generatePolyPoint(shape, he, false));
 		out = out.concat("]);\n");
 
 		if(contour.interior) {
@@ -414,13 +384,12 @@ var generateAssetFile = function(fileName) {
 		.concat("   ctx.beginPath();\n")
 		.concat("   ctx.moveTo(poly[0].x, poly[0].y);\n")
 		.concat("   for( var i=1 ; i < poly.length ; i++ ) {\n")
-		.concat("      var elem = poly[i];\n")
-		.concat("      if(!elem.bc)\n")
-		.concat("          ctx.lineTo(elem.x , elem.y);\n")
+		.concat("      var p = poly[i];\n")
+		.concat("      if(!p.bc)\n")
+		.concat("          ctx.lineTo(p.x , p.y);\n")
 		.concat("      else\n")
-		.concat("          ctx.bezierCurveTo(elem.bc[0],elem.bc[1],elem.bc[2],elem.bc[3], elem.x, elem.y);\n")
+		.concat("          ctx.bezierCurveTo(p.bc[0],p.bc[1],p.bc[2],p.bc[3], p.x, p.y);\n")
 		.concat("   }\n")
-		.concat("   ctx.closePath();\n")
 		.concat("}\n")
 		.concat("// library properties:\n")
 		.concat("lib.properties = {\n")
