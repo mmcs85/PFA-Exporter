@@ -112,8 +112,9 @@ var generateShape = function(shape, instanceName) {
 	var out = "";
 	var instanceShapeBd = instanceName+"BD";
 	
-	out = out.concat("    if(!game.cache.getBitmapData('").concat(instanceShapeBd).concat("')) {\n")
-		.concat("        var ").concat(instanceShapeBd).concat(" = game.make.bitmapData(256, 256, '").concat(instanceShapeBd).concat("', true);\n")
+	out = out.concat("    var ").concat(instanceShapeBd).concat(" = game.cache.getBitmapData('").concat(instanceShapeBd).concat("');\n")
+		.concat("    if(!").concat(instanceShapeBd).concat(") {\n")
+		.concat("        ").concat(instanceShapeBd).concat(" = game.make.bitmapData(256, 256, '").concat(instanceShapeBd).concat("', true);\n")
 		.concat("        var ctx = ").concat(instanceShapeBd).concat(".ctx;\n");
 
 	for(var c = 0; c < shape.contours.length; c++) {
@@ -196,7 +197,7 @@ var generateShape = function(shape, instanceName) {
 	}
 	
 	out = out.concat("    }\n")
-		.concat("    var ").concat(instanceName).concat(" = game.make.sprite(0, 0, '").concat(instanceShapeBd).concat("');\n");
+		.concat("    var ").concat(instanceName).concat(" = game.make.sprite(0, 0, ").concat(instanceShapeBd).concat(");\n");
 
 	return out;
 }
