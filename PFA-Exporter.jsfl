@@ -22,6 +22,12 @@ var scanElementForBitmaps = function(element) {
 					scanElementForBitmaps(member);
 				}
 			}
+			for(var c = 0; c < element.contours.length; c++) {
+				var contour = element.contours[c];						
+				if(contour.fill.style == "bitmap") {
+					addSpriteSheetItem(libItems[document.library.findItemIndex(contour.fill.bitmapPath)]);
+				}
+			}
 			break;
 		case "instance":
 			addSpriteSheetItem(element.libraryItem);
@@ -63,7 +69,7 @@ var addSpriteSheetItem = function(item) {
 
 var generateBitmapConstructor = function(fileName, item) {
 	var out = "";
-	var symbolName = item.name.substr(item.name.lastIndexOf("/")+1, item.name.length);		
+	var symbolName = item.name.substr(item.name.lastIndexOf("/")+1, item.name.length);
 	out = out.concat("lib.").concat(symbolName.replace(/\.|\-/g, "")).concat(" = function(game, x, y){\n")
 		.concat("    return game.make.sprite(x, y, '").concat(fileName).concat("', '").concat(symbolName).concat("');\n")
 		.concat("}\n\n");
@@ -78,6 +84,12 @@ var generateElementConstructor = function(fileName, element) {
 				for(var m = 0; m < element.members.length; m++) {
 					var member = element.members[m];
 					out = out.concat(generateElementConstructor(fileName, member));
+				}
+			}
+			for(var c = 0; c < element.contours.length; c++) {
+				var contour = element.contours[c];						
+				if(contour.fill.style == "bitmap") {
+					out = out.concat(generateItem(fileName, libItems[document.library.findItemIndex(contour.fill.bitmapPath)]));
 				}
 			}
 			break;
@@ -127,6 +139,10 @@ var generateShape = function(shape, instanceName) {
 		//If this value is "bitmap", the fill.bitmapIsClipped and fill.bitmapPath properties are also available.		
 		switch(contour.fill.style) {
 			case "bitmap":
+				//TODO
+				//var bitmapItem = libItems[document.library.findItemIndex(contour.fill.bitmapPath)];
+				//var bitmapName = item.name.substr(bitmapItem.name.lastIndexOf("/")+1, bitmapItem.name.length);
+				//out = out.concat("        game.make.bitmapData(256, 256);\n");
 				break;
 			case "noFill":
 				out = out.concat("        ctx.strokeStyle = '").concat(color).concat("';\n");
