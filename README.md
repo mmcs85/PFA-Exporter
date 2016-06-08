@@ -18,7 +18,8 @@ Supported features:
   
 Not Supported features:
 
-  - Linear and oval gradient fillColor
+  - Shape oval gradient fillColor
+  - Shape bitmap fill
   - Timeline animations
 
 Phaser Asset document example:
