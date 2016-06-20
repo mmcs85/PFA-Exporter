@@ -12,14 +12,13 @@ Supported features:
 
   - Generate atlas and metadata with linked symbols and their dependencies bitmaps.
   - Generate linked symbols and their dependecies.
-  - Generate Shapes.
+  - Generate Shapes with linear fill an bitmap fill(without pattern transforms).
   - Generate Texts.
   - Generate scale and rotation transformations.
+  -  Shape bitmap fill
   
 Not Supported features:
-
   - Shape oval gradient fillColor
-  - Shape bitmap fill
   - Timeline animations
 
 Phaser Asset document example:
